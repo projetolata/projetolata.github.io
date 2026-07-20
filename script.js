@@ -1,14 +1,52 @@
-// ================= CONFIGURAÇÕES DO GITHUB =================
-// Quebre o token em duas partes para o GitHub não cancelar ele automaticamente:
-const parte1 = "ghp_pevbpp64ILY9nv8w25u1i"; 
-const parte2 = "ARbVfqMK20GfWSH";
-const GITHUB_TOKEN = parte1 + parte2; 
-
-const USERNAME = "projetolata";
-const REPO = "projetolata.github.io";
-const FILE_PATH = "pins.json";
+// ================= CONFIGURAÇÕES DO JSONBIN =================
+const JSONBIN_URL = "https://api.jsonbin.io/v3/b/6a5db19ef5f4af5e29a610ea";
+const JSONBIN_KEY = "$2a$10$pUeAGxNW4YmEtB5xo1fNDO4fgRs/8aUaXgGUWD2.3inM38W4BsKGe"; // Cole entre as aspas a chave que o JSONBin te deu
 // ==========================================================
 
+let dadosSalvos = { pins: [], textos: [], tracos: [] };
+
+// 1. CARREGAR OS DADOS (Quando o site abre)
+async function carregarDados() {
+    try {
+        const response = await fetch(JSONBIN_URL, {
+            headers: { 'X-Master-Key': JSONBIN_KEY }
+        });
+        
+        if (response.ok) {
+            const resData = await response.json();
+            // O JSONBin guarda o conteúdo real dentro de .record
+            dadosSalvos = resData.record;
+            
+            if(!dadosSalvos.pins) dadosSalvos.pins = [];
+            if(!dadosSalvos.textos) dadosSalvos.textos = [];
+            if(!dadosSalvos.tracos) dadosSalvos.tracos = [];
+
+            // Desenhar tudo na tela
+            dadosSalvos.pins.forEach(p => desenharPinVisual(p));
+            dadosSalvos.textos.forEach(t => desenharTextoVisual(t));
+            dadosSalvos.tracos.forEach(tr => desenharTracoVisual(tr));
+        }
+    } catch (e) {
+        console.log("Erro ao carregar dados do JSONBin:", e);
+    }
+}
+
+// 2. SALVAR OS DADOS (Quando você mexe em algo no mapa)
+async function salvarNoGithub() { // Mantido com o mesmo nome para não quebrar o resto do seu código
+    try {
+        await fetch(JSONBIN_URL, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Master-Key': JSONBIN_KEY
+            },
+            body: JSON.stringify(dadosSalvos)
+        });
+        console.log("Salvo com sucesso!");
+    } catch (e) {
+        console.error("Erro ao salvar:", e);
+    }
+}
 // Configurando o Mapa e o Zoom
 const bounds = [[0,0], [1000,1000]]; 
 const map = L.map('map', {
