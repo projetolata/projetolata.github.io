@@ -13,11 +13,24 @@ function initMap() {
     const alturaImagem = 2048;
     const bounds = [[0, 0], [alturaImagem, larguraImagem]];
 
-    const imageOverlay = L.imageOverlay('mapa0001a.png', bounds).addTo(map);
-    
+    // Certifique-se de que o nome abaixo está idêntico ao arquivo na sua pasta do GitHub
+    const imagemUrl = 'mapa0001a.png';
+
+    const imageOverlay = L.imageOverlay(imagemUrl, bounds, {
+        errorOverlayUrl: '' // Evita loop se falhar
+    }).addTo(map);
+
     imageOverlay.on('load', function() {
         map.fitBounds(bounds);
+        console.log("Imagem do mapa carregada com sucesso!");
     });
+
+    // Se houver erro ao carregar a imagem no GitHub Pages, avisa no console
+    imageOverlay.on('error', function() {
+        console.error("ERRO: O GitHub Pages não encontrou a imagem '" + imagemUrl + "'. Verifique se o nome exato e a extensão (.png/.jpg) estão corretos no repositório.");
+        alert("Erro ao carregar a imagem do mapa. Verifique o console (F12).");
+    });
+
     map.fitBounds(bounds);
 
     drawnItems = new L.FeatureGroup();
@@ -36,7 +49,6 @@ function initMap() {
     });
     map.addControl(drawControl);
 
-    // Evento ao criar um novo elemento com o Leaflet Draw
     map.on(L.Draw.Event.CREATED, function (e) {
         const layer = e.layer;
         const type = e.layerType;
@@ -46,7 +58,6 @@ function initMap() {
         salvarNoJsonBin();
     });
 
-    // Evento ao deletar elementos usando a ferramenta de edição do Leaflet
     map.on('draw:deleted', function (e) {
         e.layers.eachLayer(function (layer) {
             removerLayerDoBanco(layer);
@@ -216,5 +227,4 @@ function importarDados() {
     input.click();
 }
 
-// Inicializa o mapa ao carregar a página
 window.onload = initMap;
