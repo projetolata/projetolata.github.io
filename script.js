@@ -3,7 +3,7 @@ const JSONBIN_URL = "https://api.jsonbin.io/v3/b/6a5db19ef5f4af5e29a610ea";
 const JSONBIN_KEY = "$2a$10$pUeAGxNW4YmEtB5xo1fNDO4fgRs/8aUaXgGUWD2.3inM38W4BsKGe"; // <--- COLE SUA MASTER KEY AQUI ENTRE AS ASPAS
 // ==========================================================
 
-let dadosSalvos = { 
+dadosSalvos = { 
     pins: [], 
     textos: [], 
     tracos: [] 
