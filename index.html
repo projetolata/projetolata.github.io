@@ -3,23 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Mapa Interativo - Atlas</title>
-    <!-- CSS do Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    
-    <!-- Botão de Upload -->
-    <div style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: #333; padding: 15px; border-radius: 8px; color: white; font-family: sans-serif;">
-        <label style="display: block; margin-bottom: 8px;"><strong>Atualizar Mapa</strong></label>
-        <input type="file" id="upload-mapa" accept="image/png, image/jpeg" style="width: 100%;">
-        <p id="status-upload" style="font-size: 12px; color: #aaa; margin: 5px 0 0 0;"></p>
-    </div>
-
-    <!-- Onde o mapa vai aparecer -->
     <div id="map"></div>
 
-    <!-- Scripts do Leaflet e Firebase -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script type="module" src="script.js"></script>
 </body>
