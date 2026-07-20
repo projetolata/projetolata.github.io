@@ -27,7 +27,7 @@ function initMap() {
     const altura = 2048;
     const bounds = [[0, 0], [altura, largura]];
     
-    L.imageOverlay('mapa.jpg', bounds).addTo(map); // Altere o nome se necessário
+    L.imageOverlay('mapa0001a.png', bounds).addTo(map); // Altere o nome se necessário
     map.fitBounds(bounds);
 
     // Camada para os desenhos
