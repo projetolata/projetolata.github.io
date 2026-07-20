@@ -1,5 +1,5 @@
 // ================= CONFIGURAÇÕES DO GITHUB =================
-const GITHUB_TOKEN = "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"; // Cole seu token clássico do GitHub aqui
+const GITHUB_TOKEN = "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"; // Cole seu token clássico do GitHub aqui
 const USERNAME = "projetolata";
 const REPO = "projetolata.github.io";
 const FILE_PATH = "pins.json";
