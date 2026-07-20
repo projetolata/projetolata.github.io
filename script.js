@@ -4,6 +4,7 @@ const JSONBIN_KEY = "$2a$10$pUeAGxNW4YmEtB5xo1fNDO4fgRs/8aUaXgGUWD2.3inM38W4BsKG
 
 let dadosSalvos = { pins: [], texts: [], emojis: [], polylines: [], polygons: [] };
 let map, drawnItems;
+let modoAdicaoAtivo = null; // Controla se o usuário está escolhendo onde clicar
 
 // ====================== INICIALIZAÇÃO ======================
 function initMap() {
@@ -17,7 +18,6 @@ function initMap() {
     
     imageOverlay.on('load', function() {
         map.fitBounds(bounds);
-        console.log("Mapa carregado com sucesso!");
     });
     map.fitBounds(bounds);
 
@@ -37,14 +37,47 @@ function initMap() {
     });
     map.addControl(drawControl);
 
-    // Evento ao criar um novo elemento com o Leaflet Draw
+    // Evento de clique geral no mapa para soltar Textos ou Emojis onde o usuário quiser
+    map.on('click', function(e) {
+        if (!modoAdicaoAtivo) return;
+
+        if (modoAdicaoAtivo.tipo === 'texto') {
+            const novoTexto = { lat: e.latlng.lat, lng: e.latlng.lng, texto: modoAdicaoAtivo.valor };
+            dadosSalvos.texts.push(novoTexto);
+            adicionarTextoNaTela(novoTexto);
+        } else if (modoAdicaoAtivo.tipo === 'emoji') {
+            const novoEmoji = { lat: e.latlng.lat, lng: e.latlng.lng, emoji: modoAdicaoAtivo.valor };
+            dadosSalvos.emojis.push(novoEmoji);
+            adicionarEmojiNaTela(novoEmoji);
+        }
+
+        salvarNoJsonBin();
+        modoAdicaoAtivo = null; // Reseta o modo de clique
+        document.getElementById('map').style.cursor = '';
+    });
+
+    // Evento ao criar pin com o Leaflet Draw
     map.on(L.Draw.Event.CREATED, function (e) {
         const layer = e.layer;
         const type = e.layerType;
 
-        adicionarLayerAoBanco(layer, type);
-        drawnItems.addLayer(layer);
-        salvarNoJsonBin();
+        if (type === 'marker') {
+            const latlng = layer.getLatLng();
+            const nome = prompt("Nome do pin:") || "Marcador";
+            const pinData = { lat: latlng.lat, lng: latlng.lng, nome: nome };
+            dadosSalvos.pins.push(pinData);
+            adicionarPopupDeletar(layer, pinData, 'pins');
+            drawnItems.addLayer(layer);
+            salvarNoJsonBin();
+        } else if (type === 'polyline') {
+            dadosSalvos.polylines.push(layer.getLatLngs());
+            drawnItems.addLayer(layer);
+            salvarNoJsonBin();
+        } else if (type === 'polygon' || type === 'rectangle') {
+            dadosSalvos.polygons.push(layer.getLatLngs());
+            drawnItems.addLayer(layer);
+            salvarNoJsonBin();
+        }
     });
 
     // Evento ao deletar elementos usando a ferramenta de edição
@@ -72,7 +105,6 @@ async function carregarDoJsonBin() {
             
             drawnItems.clearLayers();
             redesenharTudoNaTela();
-            console.log("Dados carregados com sucesso!");
         }
     } catch (e) {
         console.error("Erro ao carregar dados:", e);
@@ -89,30 +121,12 @@ async function salvarNoJsonBin() {
             },
             body: JSON.stringify(dadosSalvos)
         });
-        console.log("Salvo na nuvem com sucesso!");
     } catch (e) {
         console.error("Erro ao salvar dados:", e);
     }
 }
 
-// ====================== ADICIONAR E REMOVER ITENS ======================
-
-function adicionarLayerAoBanco(layer, type) {
-    if (type === 'marker') {
-        const latlng = layer.getLatLng();
-        const nome = prompt("Nome do pin:") || "Marcador";
-        const pinData = { lat: latlng.lat, lng: latlng.lng, nome: nome };
-        dadosSalvos.pins.push(pinData);
-        
-        adicionarPopupDeletar(layer, pinData, 'pins');
-    } 
-    else if (type === 'polyline') {
-        dadosSalvos.polylines.push(layer.getLatLngs());
-    } 
-    else if (type === 'polygon' || type === 'rectangle') {
-        dadosSalvos.polygons.push(layer.getLatLngs());
-    }
-}
+// ====================== REMOÇÃO ======================
 
 function removerLayerDoBanco(layer) {
     if (layer instanceof L.Marker) {
@@ -153,31 +167,11 @@ function redesenharTudoNaTela() {
     }
 
     if (dadosSalvos.texts) {
-        dadosSalvos.texts.forEach(t => {
-            const textIcon = L.divIcon({
-                className: 'custom-text-label',
-                html: `<div style="background: rgba(255,255,255,0.85); padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 12px; border: 1px solid #ccc; white-space: nowrap;">${t.texto}</div>`,
-                iconSize: [100, 20],
-                iconAnchor: [50, 10]
-            });
-            const marker = L.marker([t.lat, t.lng], { icon: textIcon });
-            adicionarPopupDeletar(marker, t, 'texts');
-            drawnItems.addLayer(marker);
-        });
+        dadosSalvos.texts.forEach(t => adicionarTextoNaTela(t));
     }
 
     if (dadosSalvos.emojis) {
-        dadosSalvos.emojis.forEach(e => {
-            const emojiIcon = L.divIcon({
-                className: 'custom-emoji-label',
-                html: `<div style="font-size: 24px; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">${e.emoji}</div>`,
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
-            });
-            const marker = L.marker([e.lat, e.lng], { icon: emojiIcon });
-            adicionarPopupDeletar(marker, e, 'emojis');
-            drawnItems.addLayer(marker);
-        });
+        dadosSalvos.emojis.forEach(e => adicionarEmojiNaTela(e));
     }
 
     if (dadosSalvos.polylines) {
@@ -195,22 +189,42 @@ function redesenharTudoNaTela() {
     }
 }
 
+function adicionarTextoNaTela(t) {
+    const textIcon = L.divIcon({
+        className: 'custom-text-label',
+        html: `<div style="background: rgba(255,255,255,0.85); padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 12px; border: 1px solid #ccc; white-space: nowrap;">${t.texto}</div>`,
+        iconSize: [100, 20],
+        iconAnchor: [50, 10]
+    });
+    const marker = L.marker([t.lat, t.lng], { icon: textIcon });
+    adicionarPopupDeletar(marker, t, 'texts');
+    drawnItems.addLayer(marker);
+}
+
+function adicionarEmojiNaTela(eData) {
+    const emojiIcon = L.divIcon({
+        className: 'custom-emoji-label',
+        html: `<div style="font-size: 26px; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">${eData.emoji}</div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+    });
+    const marker = L.marker([eData.lat, eData.lng], { icon: emojiIcon });
+    adicionarPopupDeletar(marker, eData, 'emojis');
+    drawnItems.addLayer(marker);
+}
+
 // ====================== FUNÇÕES DO MENU INTERATIVO ======================
 
 function adicionarTexto() {
     const texto = prompt("Digite o texto que deseja fixar no mapa:");
     if (!texto) return;
 
-    const center = map.getCenter();
-    const novoTexto = { lat: center.lat, lng: center.lng, texto: texto };
-
-    dadosSalvos.texts.push(novoTexto);
-    salvarNoJsonBin();
-    carregarDoJsonBin();
+    modoAdicaoAtivo = { tipo: 'texto', valor: texto };
+    document.getElementById('map').style.cursor = 'crosshair';
+    alert("Agora clique no local exato do mapa onde deseja colocar o texto!");
 }
 
 function adicionarEmoji() {
-    // Cria uma janela modal simples na tela com opções visuais de emojis
     let modalAntigo = document.getElementById('modal-emoji');
     if (modalAntigo) modalAntigo.remove();
 
@@ -219,39 +233,43 @@ function adicionarEmoji() {
     modal.style.cssText = `
         position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
         background: white; padding: 20px; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.3);
-        z-index: 2000; text-align: center; width: 280px; font-family: sans-serif;
+        z-index: 2000; text-align: center; width: 320px; font-family: sans-serif;
     `;
 
+    // Lista abrangente de emojis categorizados para RPG, mapas e marcações
+    const listaEmojis = [
+        "📍", "🚩", "⚔️", "🛡️", "🏰", "🏯", "⛺", "🛖", 
+        "🌲", "🌳", "🪵", "⛰️", "🌋", "💧", "🌊", "🔥", 
+        "💀", "🪙", "💰", "🗝️", "🚪", "🧭", "⭐", "❌", 
+        "⚠️", "❓", "💡", "⛵", "🚢", "🐎", "🐉", "🐺"
+    ];
+
+    let gridHtml = listaEmojis.map(emo => `
+        <button class="emoji-op" style="font-size: 22px; padding: 6px; background: #f1f1f1; border: none; border-radius: 6px; cursor: pointer;">${emo}</button>
+    `).join('');
+
     modal.innerHTML = `
-        <h3 style="margin-top: 0; color: #333;">Escolha um Emoji</h3>
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 15px;">
-            <button class="emoji-op" style="font-size: 24px; padding: 8px; background: #f1f1f1; border: none; border-radius: 6px; cursor: pointer;">🏰</button>
-            <button class="emoji-op" style="font-size: 24px; padding: 8px; background: #f1f1f1; border: none; border-radius: 6px; cursor: pointer;">⚔️</button>
-            <button class="emoji-op" style="font-size: 24px; padding: 8px; background: #f1f1f1; border: none; border-radius: 6px; cursor: pointer;">🌲</button>
-            <button class="emoji-op" style="font-size: 24px; padding: 8px; background: #f1f1f1; border: none; border-radius: 6px; cursor: pointer;">📍</button>
-            <button class="emoji-op" style="font-size: 24px; padding: 8px; background: #f1f1f1; border: none; border-radius: 6px; cursor: pointer;">💀</button>
-            <button class="emoji-op" style="font-size: 24px; padding: 8px; background: #f1f1f1; border: none; border-radius: 6px; cursor: pointer;">🪙</button>
-            <button class="emoji-op" style="font-size: 24px; padding: 8px; background: #f1f1f1; border: none; border-radius: 6px; cursor: pointer;">🔥</button>
-            <button class="emoji-op" style="font-size: 24px; padding: 8px; background: #f1f1f1; border: none; border-radius: 6px; cursor: pointer;">⛵</button>
+        <h3 style="margin-top: 0; color: #333; font-size: 16px;">Selecione um Emoji</h3>
+        <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-bottom: 12px; max-height: 180px; overflow-y: auto;">
+            ${gridHtml}
         </div>
-        <input type="text" id="emoji-custom" placeholder="Ou digite outro..." style="width: 80%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; text-align: center;">
+        <input type="text" id="emoji-custom" placeholder="Ou digite outro aqui..." style="width: 85%; padding: 6px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; text-align: center;">
         <br>
-        <button id="emoji-cancelar" style="background: #d32f2f; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">Cancelar</button>
+        <button id="emoji-cancelar" style="background: #d32f2f; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 13px;">Cancelar</button>
     `;
 
     document.body.appendChild(modal);
 
-    // Eventos de clique nas opções de emoji
     modal.querySelectorAll('.emoji-op').forEach(btn => {
         btn.onclick = () => {
-            salvarEmojiNoMapa(btn.innerText);
+            ativarSelecaoEmoji(btn.innerText);
             modal.remove();
         };
     });
 
     modal.querySelector('#emoji-custom').onchange = (e) => {
         if (e.target.value) {
-            salvarEmojiNoMapa(e.target.value);
+            ativarSelecaoEmoji(e.target.value);
             modal.remove();
         }
     };
@@ -259,13 +277,10 @@ function adicionarEmoji() {
     modal.querySelector('#emoji-cancelar').onclick = () => modal.remove();
 }
 
-function salvarEmojiNoMapa(emojiChar) {
-    const center = map.getCenter();
-    const novoEmoji = { lat: center.lat, lng: center.lng, emoji: emojiChar };
-
-    dadosSalvos.emojis.push(novoEmoji);
-    salvarNoJsonBin();
-    carregarDoJsonBin();
+function ativarSelecaoEmoji(emojiChar) {
+    modoAdicaoAtivo = { tipo: 'emoji', valor: emojiChar };
+    document.getElementById('map').style.cursor = 'crosshair';
+    alert("Agora clique no local exato do mapa onde deseja colocar o emoji " + emojiChar + "!");
 }
 
 function limparTudo() {
