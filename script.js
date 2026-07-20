@@ -3,8 +3,8 @@ const JSONBIN_URL = "https://api.jsonbin.io/v3/b/6a5db19ef5f4af5e29a610ea";
 const JSONBIN_KEY = "$2a$10$pUeAGxNW4YmEtB5xo1fNDO4fgRs/8aUaXgGUWD2.3inM38W4BsKGe";
 
 let dadosSalvos = { pins: [], texts: [], emojis: [], polylines: [], polygons: [] };
-let map;
-let drawnItems;
+let map, drawnItems;
+let isPanelVisible = true;
 
 // ====================== INICIALIZAÇÃO ======================
 function initMap() {
@@ -28,154 +28,92 @@ function initMap() {
         },
         edit: { featureGroup: drawnItems, remove: true }
     });
-    map.addControl(drawControl);
+   **✅ Entendido! Versão Atualizada conforme seu pedido exato:**
 
-    map.on(L.Draw.Event.CREATED, handleDrawCreated);
-    map.on('click', handleMapClick);
+### Principais Melhorias:
+- Removido completamente qualquer pedido de latitude/longitude
+- Menu pequeno, **movimentável (arrastável)** e **fechável**
+- Melhoria na exclusão: agora você pode clicar com botão direito em qualquer pin/desennho para deletar individualmente
 
-    carregarDados();
-}
+---
 
-// ====================== EVENTOS ======================
-function handleDrawCreated(e) {
-    drawnItems.addLayer(e.layer);
+### **1. `index.html`**
 
-    if (e.layerType === 'marker') {
-        const nome = prompt("Nome do pin:", "Novo Pin") || "Pin";
-        e.layer.bindPopup(`<b>${nome}</b>`);
-        dadosSalvos.pins.push({ lat: e.layer.getLatLng().lat, lng: e.layer.getLatLng().lng, nome });
-    } else if (e.layerType === 'polyline') {
-        dadosSalvos.polylines.push({ coords: e.layer.getLatLngs(), color: '#0066cc' });
-    } else if (e.layerType === 'polygon' || e.layerType === 'rectangle') {
-        dadosSalvos.polygons.push({ coords: e.layer.getLatLngs(), color: '#0066cc' });
-    }
-    salvarDados();
-}
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa Interativo - Atlas</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <link rel="stylesheet" href="style.css" />
+    
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; }
+        #map { height: 100vh; width: 100vw; }
 
-function handleMapClick(e) {
-    // Clique simples agora só avisa (pode desenhar com as ferramentas)
-    console.log("Clique em uma ferramenta de desenho para adicionar");
-}
-
-// ====================== NOVAS FERRAMENTAS ======================
-window.adicionarTexto = function() {
-    const texto = prompt("Digite o texto:");
-    if (!texto) return;
-
-    const latlng = map.getCenter();
-    const marker = L.marker(latlng, {
-        icon: L.divIcon({
-            className: 'text-label',
-            html: `<div style="font-size:18px; font-weight:bold; color:#000; text-shadow: 0 0 4px white;">${texto}</div>`,
-            iconSize: [150, 40]
-        })
-    }).addTo(drawnItems);
-
-    dadosSalvos.texts.push({ lat: latlng.lat, lng: latlng.lng, texto: texto });
-    salvarDados();
-};
-
-window.adicionarEmoji = function() {
-    const emoji = prompt("Digite o emoji (ex: 🔥, 🏰, 📍):", "📍");
-    if (!emoji) return;
-
-    const latlng = map.getCenter();
-    const marker = L.marker(latlng, {
-        icon: L.divIcon({
-            className: 'emoji-label',
-            html: `<div style="font-size:42px;">${emoji}</div>`,
-            iconSize: [50, 50]
-        })
-    }).addTo(drawnItems);
-
-    dadosSalvos.emojis.push({ lat: latlng.lat, lng: latlng.lng, emoji: emoji });
-    salvarDados();
-};
-
-// ====================== PERSISTÊNCIA ======================
-async function carregarDados() {
-    try {
-        const res = await fetch(JSONBIN_URL, { headers: { 'X-Master-Key': JSONBIN_KEY } });
-        if (res.ok) {
-            const json = await res.json();
-            dadosSalvos = json.record || dadosSalvos;
-            restaurarElementos();
+        .info-panel {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 12px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            z-index: 1000;
+            width: 220px;
+            cursor: move;
+            user-select: none;
         }
-    } catch (err) { console.error(err); }
-}
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        button {
+            width: 100%;
+            margin: 6px 0;
+            padding: 9px;
+            border: none;
+            border-radius: 6px;
+            background: #0066cc;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover { background: #0052a3; }
+        .delete-btn { background: #d32f2f; }
+        .delete-btn:hover { background: #b71c1c; }
+        .close-btn {
+            background: transparent;
+            color: #333;
+            width: auto;
+            padding: 0 6px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
 
-async function salvarDados() {
-    try {
-        await fetch(JSONBIN_URL, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY },
-            body: JSON.stringify(dadosSalvos)
-        });
-    } catch (err) { console.error(err); }
-}
+    <!-- Menu Movimentável -->
+    <div id="info-panel" class="info-panel">
+        <div class="panel-header">
+            <span>🗺️ Atlas</span>
+            <button class="close-btn" onclick="togglePanel()">✕</button>
+        </div>
+        <button onclick="adicionarTexto()">✍️ Adicionar Texto</button>
+        <button onclick="adicionarEmoji()">😀 Adicionar Emoji</button>
+        <button onclick="limparTudo()" class="delete-btn">🗑️ Limpar Tudo</button>
+        <button onclick="exportarDados()">📤 Exportar</button>
+        <button onclick="importarDados()">📥 Importar</button>
+    </div>
 
-function restaurarElementos() {
-    drawnItems.clearLayers();
-
-    // Pins
-    dadosSalvos.pins.forEach(p => {
-        const m = L.marker([p.lat, p.lng]).addTo(drawnItems);
-        m.bindPopup(`<b>${p.nome}</b>`);
-    });
-
-    // Textos
-    dadosSalvos.texts.forEach(t => {
-        L.marker([t.lat, t.lng], {
-            icon: L.divIcon({ html: `<div style="font-size:18px; font-weight:bold;">${t.texto}</div>`, iconSize: [150,40] })
-        }).addTo(drawnItems);
-    });
-
-    // Emojis
-    dadosSalvos.emojis.forEach(e => {
-        L.marker([e.lat, e.lng], {
-            icon: L.divIcon({ html: `<div style="font-size:42px;">${e.emoji}</div>`, iconSize: [50,50] })
-        }).addTo(drawnItems);
-    });
-
-    // Desenhos
-    dadosSalvos.polylines.forEach(l => L.polyline(l.coords, { color: l.color }).addTo(drawnItems));
-    dadosSalvos.polygons.forEach(p => L.polygon(p.coords, { color: p.color }).addTo(drawnItems));
-}
-
-// ====================== OUTRAS FUNÇÕES ======================
-window.limparTudo = async function () {
-    if (!confirm("Limpar todo o mapa?")) return;
-    drawnItems.clearLayers();
-    dadosSalvos = { pins: [], texts: [], emojis: [], polylines: [], polygons: [] };
-    await salvarDados();
-};
-
-window.exportarDados = function () {
-    const blob = new Blob([JSON.stringify(dadosSalvos, null, 2)], { type: "application/json" });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `atlas_backup_${new Date().toISOString().slice(0,10)}.json`;
-    a.click();
-};
-
-window.importarDados = function () {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = e => {
-        const reader = new FileReader();
-        reader.onload = async ev => {
-            try {
-                dadosSalvos = JSON.parse(ev.target.result);
-                restaurarElementos();
-                await salvarDados();
-                alert("Importado!");
-            } catch (err) { alert("Erro ao importar"); }
-        };
-        reader.readAsText(e.target.files[0]);
-    };
-    input.click();
-};
-
-// Iniciar
-window.onload = initMap;
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
