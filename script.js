@@ -11,7 +11,7 @@ function initMap() {
     map = L.map('map', { crs: L.CRS.Simple, minZoom: -3, maxZoom: 5 });
 
     const bounds = [[0, 0], [2048, 2048]];
-    L.imageOverlay('mapa.jpg', bounds).addTo(map);
+    L.imageOverlay('mapa0001a.png', bounds).addTo(map);
     map.fitBounds(bounds);
 
     drawnItems = new L.FeatureGroup();
