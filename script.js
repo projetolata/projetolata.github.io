@@ -37,19 +37,18 @@ function initMap() {
     });
     map.addControl(drawControl);
 
-    // Evento de clique para soltar textos ou emojis onde o usuário quiser no mapa
+    // Evento de clique esquerdo para colocar um PIN com o texto ou emoji escolhido
     map.on('click', function(e) {
         if (!modoAdicaoAtivo) return;
 
-        if (modoAdicaoAtivo.tipo === 'texto') {
-            const novoTexto = { lat: e.latlng.lat, lng: e.latlng.lng, texto: modoAdicaoAtivo.valor };
-            dadosSalvos.texts.push(novoTexto);
-            adicionarTextoNaTela(novoTexto);
-        } else if (modoAdicaoAtivo.tipo === 'emoji') {
-            const novoEmoji = { lat: e.latlng.lat, lng: e.latlng.lng, emoji: modoAdicaoAtivo.valor };
-            dadosSalvos.emojis.push(novoEmoji);
-            adicionarEmojiNaTela(novoEmoji);
-        }
+        const novoPin = { 
+            lat: e.latlng.lat, 
+            lng: e.latlng.lng, 
+            nome: modoAdicaoAtivo.valor 
+        };
+
+        dadosSalvos.pins.push(novoPin);
+        adicionarPinNaTela(novoPin);
 
         salvarNoJsonBin();
         modoAdicaoAtivo = null;
@@ -136,10 +135,10 @@ function removerLayerDoBanco(layer) {
 }
 
 function adicionarPopupDeletar(layer, itemData, tipoArray) {
-    const nomeExibido = itemData.nome || itemData.texto || itemData.emoji || 'Item';
+    const nomeExibido = itemData.nome || 'Marcador';
     const conteudo = `
-        <div>
-            <b>${nomeExibido}</b><br><br>
+        <div style="text-align: center;">
+            <b style="font-size: 14px;">${nomeExibido}</b><br><br>
             <button onclick="deletarItemEspecifico(${itemData.lat}, ${itemData.lng}, '${tipoArray}')" class="delete-btn" style="padding: 5px 10px; font-size: 12px; background: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️ Excluir</button>
         </div>
     `;
@@ -158,11 +157,7 @@ function deletarItemEspecifico(lat, lng, tipoArray) {
 
 function redesenharTudoNaTela() {
     if (dadosSalvos.pins) {
-        dadosSalvos.pins.forEach(p => {
-            const marker = L.marker([p.lat, p.lng]);
-            adicionarPopupDeletar(marker, p, 'pins');
-            drawnItems.addLayer(marker);
-        });
+        dadosSalvos.pins.forEach(p => adicionarPinNaTela(p));
     }
 
     if (dadosSalvos.texts) {
@@ -186,6 +181,12 @@ function redesenharTudoNaTela() {
             drawnItems.addLayer(polygon);
         });
     }
+}
+
+function adicionarPinNaTela(p) {
+    const marker = L.marker([p.lat, p.lng]);
+    adicionarPopupDeletar(marker, p, 'pins');
+    drawnItems.addLayer(marker);
 }
 
 function adicionarTextoNaTela(t) {
@@ -220,7 +221,7 @@ function adicionarTexto() {
 
     modoAdicaoAtivo = { tipo: 'texto', valor: texto };
     document.getElementById('map').style.cursor = 'crosshair';
-    alert("Agora clique no local exato do mapa onde deseja colocar o texto!");
+    alert("Agora clique no local exato do mapa onde deseja colocar o pin com este texto!");
 }
 
 function adicionarEmoji() {
@@ -242,7 +243,6 @@ function adicionarEmoji() {
         "⚠️", "❓", "💡", "⛵", "🚢", "🐎", "🐉", "🐺"
     ];
 
-    // Forçamos tamanho fixo nos botões do grid para não estourarem o layout
     let gridHtml = listaEmojis.map(emo => `
         <button class="emoji-op" style="font-size: 20px; width: 35px; height: 35px; background: #f1f1f1; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: auto;">${emo}</button>
     `).join('');
@@ -277,9 +277,9 @@ function adicionarEmoji() {
 }
 
 function ativarSelecaoEmoji(emojiChar) {
-    modoAdicaoAtivo = { tipo: 'emoji', valor: emojiChar };
+    modoAdicaoAtivo = { tipo: 'pin', valor: emojiChar };
     document.getElementById('map').style.cursor = 'crosshair';
-    alert("Agora clique no local exato do mapa onde deseja colocar o emoji " + emojiChar + "!");
+    alert("Agora clique no local exato do mapa onde deseja colocar o pin!");
 }
 
 function limparTudo() {
