@@ -1,177 +1,131 @@
-// ================= CONFIGURAÇÕES DO JSONBIN =================
+// ====================== CONFIGURAÇÕES ======================
 const JSONBIN_URL = "https://api.jsonbin.io/v3/b/6a5db19ef5f4af5e29a610ea";
-const JSONBIN_KEY = "$2a$10$pUeAGxNW4YmEtB5xo1fNDO4fgRs/8aUaXgGUWD2.3inM38W4BsKGe"; // <--- COLE SUA MASTER KEY AQUI
-// ==========================================================
+const JSONBIN_KEY = "$2a$10$pUeAGxNW4YmEtB5xo1fNDO4fgRs/8aUaXgGUWD2.3inM38W4BsKGe"; // ← Troque pela sua key
 
-let dadosSalvos = { 
-    pins: [], 
-    textos: [], 
-    tracos: [] 
+// ====================== VARIÁVEIS GLOBAIS ======================
+let dadosSalvos = {
+    pins: [],
+    polylines: [],
+    polygons: []
 };
 
-// 1. INICIALIZAÇÃO DO SEU MAPA (Com a sua imagem personalizada e CRS.Simple)
-const map = L.map('map', {
-    crs: L.CRS.Simple,
-    minZoom: -2,
-    maxZoom: 4
-});
+let map;
+let drawnItems;
 
-// Defina aqui as dimensões da sua imagem do mapa (largura, altura)
-const larguraImagem = 2048; 
-const alturaImagem = 2048;
-const bounds = [[0, 0], [alturaImagem, larguraImagem]];
+// ====================== INICIALIZAÇÃO ======================
+function initMap() {
+    map = L.map('map', {
+        crs: L.CRS.Simple,
+        minZoom: -3,
+        maxZoom: 5,
+        zoomControl: true,
+        attributionControl: false
+    });
 
-L.imageOverlay('mapa.jpg', bounds).addTo(map); // Mude 'mapa.jpg' para o nome exato do arquivo da sua imagem
-map.fitBounds(bounds);
+    // === IMAGEM DO MAPA PERSONALIZADA ===
+    const largura = 2048;
+    const altura = 2048;
+    const bounds = [[0, 0], [altura, largura]];
+    
+    L.imageOverlay('mapa.jpg', bounds).addTo(map); // Altere o nome se necessário
+    map.fitBounds(bounds);
 
-// 2. FUNÇÕES VISUAIS PARA DESENHAR OS ITENS NO SEU MAPA
-function desenharPinVisual(pin) {
-    const marker = L.marker([pin.lat, pin.lng]).addTo(map);
-    if (pin.nome) {
-        marker.bindPopup(pin.nome);
-    }
-}
+    // Camada para os desenhos
+    drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
 
-function desenharTextoVisual(texto) {
-    // Sua lógica existente para desenhar textos
-}
-
-function desenharTracoVisual(traco) {
-    // Sua lógica existente para desenhar traços
-}
-
-// 3. CARREGAR OS DADOS DA NUVEM (Ao abrir o site)
-async function carregarDados() {
-    try {
-        const response = await fetch(JSONBIN_URL, {
-            headers: { 'X-Master-Key': JSONBIN_KEY }
-        });
-        
-        if (response.ok) {
-            const resData = await response.json();
-            dadosSalvos = resData.record || {};
-            
-            if (!dadosSalvos.pins) dadosSalvos.pins = [];
-            if (!dadosSalvos.textos) dadosSalvos.textos = [];
-            if (!dadosSalvos.tracos) dadosSalvos.tracos = [];
-
-            // Desenha todos os itens salvos no seu mapa
-            dadosSalvos.pins.forEach(p => desenharPinVisual(p));
-            dadosSalvos.textos.forEach(t => desenharTextoVisual(t));
-            dadosSalvos.tracos.forEach(tr => desenharTracoVisual(tr));
-            
-            console.log("Dados carregados com sucesso no seu mapa!");
-        } else {
-            console.error("Erro ao carregar do JSONBin. Status:", response.status);
+    // ================= CONTROLES DE DESENHO =================
+    const drawControl = new L.Control.Draw({
+        draw: {
+            marker: true,
+            polyline: { shapeOptions: { color: '#3388ff' } },
+            polygon: { shapeOptions: { color: '#3388ff' } },
+            rectangle: { shapeOptions: { color: '#3388ff' } },
+            circle: false,
+            circlemarker: false
+        },
+        edit: {
+            featureGroup: drawnItems,
+            remove: true
         }
-    } catch (e) {
-        console.error("Erro de conexão ao carregar dados:", e);
-    }
+    });
+    map.addControl(drawControl);
+
+    // ================= EVENTOS ======================
+    map.on(L.Draw.Event.CREATED, handleDrawCreated);
+    map.on('click', handleSimpleClick);
+
+    carregarDados();
 }
 
-// 4. SALVAR OS DADOS NA NUVEM
-async function salvarNoGithub() { // Nome mantido para não quebrar outros botões do seu projeto
-    try {
-        const response = await fetch(JSONBIN_URL, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Master-Key': JSONBIN_KEY
-            },
-            body: JSON.stringify(dadosSalvos)
+// ====================== EVENTOS DE DESENHO ======================
+function handleDrawCreated(e) {
+    const layer = e.layer;
+    drawnItems.addLayer(layer);
+
+    if (e.layerType === 'marker') {
+        const nome = prompt("Nome do marcador:", "Novo Pin") || "Sem nome";
+        layer.bindPopup(nome);
+
+        dadosSalvos.pins.push({
+            lat: layer.getLatLng().lat,
+            lng: layer.getLatLng().lng,
+            nome: nome
         });
-
-        if (response.ok) {
-            console.log("Salvo com sucesso no JSONBin!");
-        } else {
-            console.error("Erro ao salvar. Status:", response.status);
-        }
-    } catch (e) {
-        console.error("Erro de conexão ao salvar:", e);
+    } 
+    else if (e.layerType === 'polyline') {
+        dadosSalvos.polylines.push({
+            coords: layer.getLatLngs(),
+            color: '#3388ff'
+        });
+    } 
+    else if (e.layerType === 'polygon' || e.layerType === 'rectangle') {
+        dadosSalvos.polygons.push({
+            coords: layer.getLatLngs(),
+            color: '#3388ff'
+        });
     }
+
+    salvarDados();
 }
 
-// 5. CLIQUE NO SEU MAPA PARA ADICIONAR UM NOVO PIN
-map.on('click', function(e) {
-    const nomePin = prompt("Nome do pin:");
-    if (!nomePin) return;
+// Clique simples no mapa
+function handleSimpleClick(e) {
+    if (!confirm("Adicionar um pin neste local?")) return;
 
-    const novoPin = {
+    const nome = prompt("Nome do pin:", "") || "Novo Pin";
+    const marker = L.marker(e.latlng).addTo(drawnItems);
+    marker.bindPopup(nome);
+
+    dadosSalvos.pins.push({
         lat: e.latlng.lat,
         lng: e.latlng.lng,
-        nome: nomePin
-    };
+        nome: nome
+    });
 
-    // Adiciona na lista, desenha na tela e salva na nuvem
-    dadosSalvos.pins.push(novoPin);
-    desenharPinVisual(novoPin);
-    salvarNoGithub();
-});
-
-// Executa o carregamento assim que o script é aberto
-carregarDados();// ================= CONFIGURAÇÕES DO JSONBIN =================
-const JSONBIN_URL = "https://api.jsonbin.io/v3/b/6a5db19ef5f4af5e29a610ea";
-const JSONBIN_KEY = "$2a$10$pUeAGxNW4YmEtB5xo1fNDO4fgRs/8aUaXgGUWD2.3inM38W4BsKGe"; // <--- COLE SUA MASTER KEY AQUI
-// ==========================================================
-
-// DECLARAÇÃO CORRETA DA VARIÁVEL GLOBAL
-let dadosSalvos = { 
-    pins: [], 
-    textos: [], 
-    tracos: [] 
-};
-
-// 1. INICIALIZAR O MAPA (Ajuste 'map' se o ID da sua div for diferente no HTML)
-const map = L.map('map').setView([0, 0], 2); 
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19
-}).addTo(map);
-
-// 2. FUNÇÃO VISUAL PARA DESENHAR O PIN NO MAPA
-function desenharPinVisual(pin) {
-    const marker = L.marker([pin.lat, pin.lng]).addTo(map);
-    if (pin.nome) {
-        marker.bindPopup(pin.nome);
-    }
+    salvarDados();
 }
 
-function desenharTextoVisual(texto) {
-    // Sua lógica de texto (se houver)
-}
-
-function desenharTracoVisual(traco) {
-    // Sua lógica de traços (se houver)
-}
-
-// 3. CARREGAR OS DADOS DA NUVEM
+// ====================== SALVAR / CARREGAR ======================
 async function carregarDados() {
     try {
         const response = await fetch(JSONBIN_URL, {
             headers: { 'X-Master-Key': JSONBIN_KEY }
         });
-        
-        if (response.ok) {
-            const resData = await response.json();
-            dadosSalvos = resData.record || {};
-            
-            if (!dadosSalvos.pins) dadosSalvos.pins = [];
-            if (!dadosSalvos.textos) dadosSalvos.textos = [];
-            if (!dadosSalvos.tracos) dadosSalvos.tracos = [];
 
-            dadosSalvos.pins.forEach(p => desenharPinVisual(p));
-            dadosSalvos.textos.forEach(t => desenharTextoVisual(t));
-            dadosSalvos.tracos.forEach(tr => desenharTracoVisual(tr));
-            
-            console.log("Mapa e pins carregados com sucesso!");
+        if (response.ok) {
+            const json = await response.json();
+            dadosSalvos = json.record || dadosSalvos;
+
+            restaurarElementos();
+            console.log("✅ Dados carregados com sucesso!");
         }
-    } catch (e) {
-        console.error("Erro ao carregar dados:", e);
+    } catch (err) {
+        console.error("Erro ao carregar dados:", err);
     }
 }
 
-// 4. SALVAR OS DADOS NA NUVEM
-async function salvarNoGithub() { // Nome mantido para não quebrar outros botões
+async function salvarDados() {
     try {
         await fetch(JSONBIN_URL, {
             method: 'PUT',
@@ -181,27 +135,66 @@ async function salvarNoGithub() { // Nome mantido para não quebrar outros botõ
             },
             body: JSON.stringify(dadosSalvos)
         });
-        console.log("Salvo com sucesso!");
-    } catch (e) {
-        console.error("Erro ao salvar:", e);
+        console.log("💾 Dados salvos no JSONBin");
+    } catch (err) {
+        console.error("Erro ao salvar:", err);
     }
 }
 
-// 5. CLIQUE NO MAPA PARA ADICIONAR UM NOVO PIN
-map.on('click', function(e) {
-    const nomePin = prompt("Nome do pin:");
-    if (!nomePin) return;
+function restaurarElementos() {
+    drawnItems.clearLayers();
 
-    const novoPin = {
-        lat: e.latlng.lat,
-        lng: e.latlng.lng,
-        nome: nomePin
-    };
+    // Pins
+    dadosSalvos.pins.forEach(pin => {
+        const marker = L.marker([pin.lat, pin.lng]).addTo(drawnItems);
+        if (pin.nome) marker.bindPopup(pin.nome);
+    });
 
-    dadosSalvos.pins.push(novoPin);
-    desenharPinVisual(novoPin);
-    salvarNoGithub();
-});
+    // Polylines
+    dadosSalvos.polylines.forEach(line => {
+        L.polyline(line.coords, { color: line.color }).addTo(drawnItems);
+    });
 
-// Executa ao abrir a página
-carregarDados();
+    // Polygons
+    dadosSalvos.polygons.forEach(poly => {
+        L.polygon(poly.coords, { color: poly.color }).addTo(drawnItems);
+    });
+}
+
+// ====================== FUNÇÕES AUXILIARES ======================
+function adicionarPinManual() {
+    const lat = parseFloat(prompt("Latitude:"));
+    const lng = parseFloat(prompt("Longitude:"));
+    const nome = prompt("Nome do pin:") || "Novo Pin";
+
+    if (isNaN(lat) || isNaN(lng)) return;
+
+    const marker = L.marker([lat, lng]).addTo(drawnItems);
+    marker.bindPopup(nome);
+
+    dadosSalvos.pins.push({ lat, lng, nome });
+    salvarDados();
+}
+
+async function limparTudo() {
+    if (!confirm("⚠️ Apagar TODOS os itens do mapa?")) return;
+    
+    drawnItems.clearLayers();
+    dadosSalvos = { pins: [], polylines: [], polygons: [] };
+    await salvarDados();
+    alert("Mapa limpo!");
+}
+
+function exportarDados() {
+    const dataStr = JSON.stringify(dadosSalvos, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mapa_backup_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// ====================== INICIAR ======================
+document.addEventListener('DOMContentLoaded', initMap);
