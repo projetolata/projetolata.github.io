@@ -17,7 +17,7 @@ const map = L.map('map', {
 map.fitBounds(bounds);
 
 // Carrega o mapa direto da imagem local/repositório
-L.imageOverlay('mapa0001a.png', bounds).addTo(map);
+L.imageOverlay('mapa0001a.png.png', bounds).addTo(map);
 
 // Sistema de Pins (Adicionar)
 map.on('click', function(e) {
