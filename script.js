@@ -41,10 +41,13 @@ function initMap() {
     map.on('click', function(e) {
         if (!emojiSelecionadoAtivo) return;
 
+        const nome = prompt("Nome do pin (emoji):") || emojiSelecionadoAtivo;
+
         const novoEmoji = { 
             lat: e.latlng.lat, 
             lng: e.latlng.lng, 
-            emoji: emojiSelecionadoAtivo 
+            emoji: emojiSelecionadoAtivo,
+            nome: nome
         };
 
         dadosSalvos.emojis.push(novoEmoji);
