@@ -2,9 +2,9 @@
 const JSONBIN_URL = "https://api.jsonbin.io/v3/b/6a5db19ef5f4af5e29a610ea";
 const JSONBIN_KEY = "$2a$10$pUeAGxNW4YmEtB5xo1fNDO4fgRs/8aUaXgGUWD2.3inM38W4BsKGe";
 
-let dadosSalvos = { pins: [], texts: [], emojis: [], polylines: [], polygons: [] };
+let dadosSalvos = { pins: [], emojis: [], polylines: [], polygons: [] };
 let map, drawnItems;
-let modoAdicaoAtivo = null;
+let emojiSelecionadoAtivo = null;
 
 // ====================== INICIALIZAÇÃO ======================
 function initMap() {
@@ -37,24 +37,25 @@ function initMap() {
     });
     map.addControl(drawControl);
 
-    // Evento de clique esquerdo para colocar o pin com o texto/emoji onde o usuário clicar
+    // Evento de clique para colocar o emoji selecionado no mapa
     map.on('click', function(e) {
-        if (!modoAdicaoAtivo) return;
+        if (!emojiSelecionadoAtivo) return;
 
-        const novoPin = { 
+        const novoEmoji = { 
             lat: e.latlng.lat, 
             lng: e.latlng.lng, 
-            nome: modoAdicaoAtivo.valor 
+            emoji: emojiSelecionadoAtivo 
         };
 
-        dadosSalvos.pins.push(novoPin);
-        adicionarPinNaTela(novoPin);
+        dadosSalvos.emojis.push(novoEmoji);
+        adicionarEmojiNaTela(novoEmoji);
 
         salvarNoJsonBin();
-        modoAdicaoAtivo = null;
+        emojiSelecionadoAtivo = null;
         document.getElementById('map').style.cursor = '';
     });
 
+    // Evento para o pin normal (usando a ferramenta padrão do Leaflet Draw)
     map.on(L.Draw.Event.CREATED, function (e) {
         const layer = e.layer;
         const type = e.layerType;
@@ -98,7 +99,7 @@ async function carregarDoJsonBin() {
         
         if (response.ok) {
             const resData = await response.json();
-            dadosSalvos = resData.record || { pins: [], texts: [], emojis: [], polylines: [], polygons: [] };
+            dadosSalvos = resData.record || { pins: [], emojis: [], polylines: [], polygons: [] };
             
             drawnItems.clearLayers();
             redesenharTudoNaTela();
@@ -129,13 +130,12 @@ function removerLayerDoBanco(layer) {
     if (layer instanceof L.Marker) {
         const latlng = layer.getLatLng();
         dadosSalvos.pins = dadosSalvos.pins.filter(p => p.lat !== latlng.lat || p.lng !== latlng.lng);
-        dadosSalvos.texts = dadosSalvos.texts.filter(t => t.lat !== latlng.lat || t.lng !== latlng.lng);
         dadosSalvos.emojis = dadosSalvos.emojis.filter(e => e.lat !== latlng.lat || e.lng !== latlng.lng);
     }
 }
 
 function adicionarPopupDeletar(layer, itemData, tipoArray) {
-    const nomeExibido = itemData.nome || 'Marcador';
+    const nomeExibido = itemData.nome || itemData.emoji || 'Item';
     const conteudo = `
         <div style="text-align: center;">
             <b style="font-size: 14px;">${nomeExibido}</b><br><br>
@@ -157,24 +157,15 @@ function deletarItemEspecifico(lat, lng, tipoArray) {
 
 function redesenharTudoNaTela() {
     if (dadosSalvos.pins) {
-        dadosSalvos.pins.forEach(p => adicionarPinNaTela(p));
-    }
-
-    // Compatibilidade com dados antigos salvos como texts ou emojis puros
-    if (dadosSalvos.texts) {
-        dadosSalvos.texts.forEach(t => {
-            dadosSalvos.pins.push({ lat: t.lat, lng: t.lng, nome: t.texto });
-            adicionarPinNaTela({ lat: t.lat, lng: t.lng, nome: t.texto });
+        dadosSalvos.pins.forEach(p => {
+            const marker = L.marker([p.lat, p.lng]);
+            adicionarPopupDeletar(marker, p, 'pins');
+            drawnItems.addLayer(marker);
         });
-        dadosSalvos.texts = [];
     }
 
     if (dadosSalvos.emojis) {
-        dadosSalvos.emojis.forEach(e => {
-            dadosSalvos.pins.push({ lat: e.lat, lng: e.lng, nome: e.emoji });
-            adicionarPinNaTela({ lat: e.lat, lng: e.lng, nome: e.emoji });
-        });
-        dadosSalvos.emojis = [];
+        dadosSalvos.emojis.forEach(e => adicionarEmojiNaTela(e));
     }
 
     if (dadosSalvos.polylines) {
@@ -192,21 +183,26 @@ function redesenharTudoNaTela() {
     }
 }
 
-function adicionarPinNaTela(p) {
-    const marker = L.marker([p.lat, p.lng]);
-    adicionarPopupDeletar(marker, p, 'pins');
+function adicionarEmojiNaTela(eData) {
+    const emojiIcon = L.divIcon({
+        className: 'custom-emoji-label',
+        html: `<div style="font-size: 26px; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.3); width: 30px; height: 30px; line-height: 30px;">${eData.emoji}</div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+    });
+    const marker = L.marker([eData.lat, eData.lng], { icon: emojiIcon });
+    adicionarPopupDeletar(marker, eData, 'emojis');
     drawnItems.addLayer(marker);
 }
 
 // ====================== FUNÇÕES DO MENU INTERATIVO ======================
 
 function adicionarTexto() {
-    const texto = prompt("Digite o texto que deseja fixar no mapa:");
+    const texto = prompt("Digite o texto que deseja para o pin:");
     if (!texto) return;
 
-    modoAdicaoAtivo = { tipo: 'pin', valor: texto };
-    document.getElementById('map').style.cursor = 'crosshair';
-    alert("Agora clique no local exato do mapa onde deseja colocar o pin com este texto!");
+    window.proximoNomePin = texto;
+    new L.Draw.Marker(map, map.drawControl.options.draw.marker).enable();
 }
 
 function adicionarEmoji() {
@@ -246,14 +242,14 @@ function adicionarEmoji() {
 
     modal.querySelectorAll('.emoji-op').forEach(btn => {
         btn.onclick = () => {
-            ativarSelecaoEmoji(btn.innerText.trim());
+            ativarModoEmoji(btn.innerText.trim());
             modal.remove();
         };
     });
 
     modal.querySelector('#emoji-custom').onchange = (e) => {
         if (e.target.value) {
-            ativarSelecaoEmoji(e.target.value.trim());
+            ativarModoEmoji(e.target.value.trim());
             modal.remove();
         }
     };
@@ -261,15 +257,14 @@ function adicionarEmoji() {
     modal.querySelector('#emoji-cancelar').onclick = () => modal.remove();
 }
 
-function ativarSelecaoEmoji(emojiChar) {
-    modoAdicaoAtivo = { tipo: 'pin', valor: emojiChar };
+function ativarModoEmoji(emojiChar) {
+    emojiSelecionadoAtivo = emojiChar;
     document.getElementById('map').style.cursor = 'crosshair';
-    alert("Agora clique no local exato do mapa onde deseja colocar o pin!");
 }
 
 function limparTudo() {
     if (confirm("Tem certeza que deseja apagar TUDO do mapa?")) {
-        dadosSalvos = { pins: [], texts: [], emojis: [], polylines: [], polygons: [] };
+        dadosSalvos = { pins: [], emojis: [], polylines: [], polygons: [] };
         drawnItems.clearLayers();
         salvarNoJsonBin();
     }
