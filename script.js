@@ -37,7 +37,7 @@ function initMap() {
     });
     map.addControl(drawControl);
 
-    // Evento de clique esquerdo para colocar um PIN com o texto ou emoji escolhido
+    // Evento de clique esquerdo para colocar o pin com o texto/emoji onde o usuário clicar
     map.on('click', function(e) {
         if (!modoAdicaoAtivo) return;
 
@@ -160,12 +160,21 @@ function redesenharTudoNaTela() {
         dadosSalvos.pins.forEach(p => adicionarPinNaTela(p));
     }
 
+    // Compatibilidade com dados antigos salvos como texts ou emojis puros
     if (dadosSalvos.texts) {
-        dadosSalvos.texts.forEach(t => adicionarTextoNaTela(t));
+        dadosSalvos.texts.forEach(t => {
+            dadosSalvos.pins.push({ lat: t.lat, lng: t.lng, nome: t.texto });
+            adicionarPinNaTela({ lat: t.lat, lng: t.lng, nome: t.texto });
+        });
+        dadosSalvos.texts = [];
     }
 
     if (dadosSalvos.emojis) {
-        dadosSalvos.emojis.forEach(e => adicionarEmojiNaTela(e));
+        dadosSalvos.emojis.forEach(e => {
+            dadosSalvos.pins.push({ lat: e.lat, lng: e.lng, nome: e.emoji });
+            adicionarPinNaTela({ lat: e.lat, lng: e.lng, nome: e.emoji });
+        });
+        dadosSalvos.emojis = [];
     }
 
     if (dadosSalvos.polylines) {
@@ -189,37 +198,13 @@ function adicionarPinNaTela(p) {
     drawnItems.addLayer(marker);
 }
 
-function adicionarTextoNaTela(t) {
-    const textIcon = L.divIcon({
-        className: 'custom-text-label',
-        html: `<div style="background: rgba(255,255,255,0.9); padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 13px; border: 1px solid #999; box-shadow: 0 2px 5px rgba(0,0,0,0.2); white-space: nowrap;">${t.texto}</div>`,
-        iconSize: [120, 24],
-        iconAnchor: [60, 12]
-    });
-    const marker = L.marker([t.lat, t.lng], { icon: textIcon });
-    adicionarPopupDeletar(marker, t, 'texts');
-    drawnItems.addLayer(marker);
-}
-
-function adicionarEmojiNaTela(eData) {
-    const emojiIcon = L.divIcon({
-        className: 'custom-emoji-label',
-        html: `<div style="font-size: 26px; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.3); width: 30px; height: 30px; line-height: 30px;">${eData.emoji}</div>`,
-        iconSize: [30, 30],
-        iconAnchor: [15, 15]
-    });
-    const marker = L.marker([eData.lat, eData.lng], { icon: emojiIcon });
-    adicionarPopupDeletar(marker, eData, 'emojis');
-    drawnItems.addLayer(marker);
-}
-
 // ====================== FUNÇÕES DO MENU INTERATIVO ======================
 
 function adicionarTexto() {
     const texto = prompt("Digite o texto que deseja fixar no mapa:");
     if (!texto) return;
 
-    modoAdicaoAtivo = { tipo: 'texto', valor: texto };
+    modoAdicaoAtivo = { tipo: 'pin', valor: texto };
     document.getElementById('map').style.cursor = 'crosshair';
     alert("Agora clique no local exato do mapa onde deseja colocar o pin com este texto!");
 }
