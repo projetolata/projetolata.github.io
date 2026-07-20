@@ -10,22 +10,22 @@
     <link rel="stylesheet" href="style.css" />
     
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; }
+        body { margin: 0; padding: 0; overflow: hidden; font-family: Arial, sans-serif; }
         #map { height: 100vh; width: 100vw; }
         
         .info-panel {
             position: absolute;
             top: 15px;
             left: 15px;
-            background: rgba(255, 255, 255, 0.96);
+            background: rgba(255, 255, 255, 0.97);
             padding: 15px;
-            border-radius: 10px;
+            border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.25);
             z-index: 1000;
-            max-width: 290px;
+            max-width: 300px;
         }
         button {
-            margin: 5px 3px;
+            margin: 6px 4px;
             padding: 10px 14px;
             border: none;
             border-radius: 6px;
@@ -44,14 +44,14 @@
 
     <div class="info-panel">
         <h3>🗺️ Atlas Interativo</h3>
-        <button onclick="adicionarPinManual()">➕ Adicionar Pin Manual</button><br>
+        <button onclick="adicionarPinManual()">➕ Pin Manual</button><br>
         <button onclick="limparTudo()" class="delete-btn">🗑️ Limpar Tudo</button><br><br>
-        <button onclick="exportarDados()">📤 Exportar Backup</button>
-        <button onclick="importarDados()">📥 Importar Backup</button>
+        <button onclick="exportarDados()">📤 Exportar</button>
+        <button onclick="importarDados()">📥 Importar</button>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-    <script type="module" src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
