@@ -88,7 +88,11 @@ document.addEventListener('change', (e) => {
 // ================= SINCRONIZAÇÃO COM O GITHUB =================
 async function carregarDados() {
     try {
-        const response = await fetch(`https://api.github.com/repos/${USERNAME}/${REPO}/contents/${FILE_PATH}`);
+        // ADICIONADO: O cabeçalho de autorização também era necessário aqui no GET!
+        const response = await fetch(`https://api.github.com/repos/${USERNAME}/${REPO}/contents/${FILE_PATH}`, {
+            headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
+        });
+        
         if (response.ok) {
             const data = await response.json();
             const jsonString = decodeURIComponent(escape(atob(data.content)));
@@ -141,7 +145,6 @@ async function salvarNoGithub() {
         console.error("Erro ao salvar dados no GitHub:", e);
     }
 }
-
 // ================= FUNÇÕES DE DESENHO E INTERAÇÃO =================
 
 // 1. Pins com Cores e Emojis personalizados
