@@ -13,6 +13,7 @@
         body { margin: 0; padding: 0; overflow: hidden; }
         #map { height: 100vh; width: 100vw; }
 
+        /* Painel flutuante e movível */
         .info-panel {
             position: absolute;
             top: 15px;
@@ -23,16 +24,21 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.25);
             z-index: 1000;
             width: 220px;
-            cursor: move;
             user-select: none;
         }
+
         .panel-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 10px;
             font-weight: bold;
+            cursor: move; /* Indica que a barra superior arrasta o menu */
+            background: #f1f1f1;
+            padding: 6px;
+            border-radius: 6px;
         }
+
         button {
             width: 100%;
             margin: 6px 0;
@@ -46,20 +52,44 @@
         button:hover { background: #0052a3; }
         .delete-btn { background: #d32f2f; }
         .delete-btn:hover { background: #b71c1c; }
+        
         .close-btn {
             background: transparent;
             color: #333;
             width: auto;
             padding: 0 6px;
+            cursor: pointer;
+            font-weight: bold;
         }
+        .close-btn:hover { background: rgba(0,0,0,0.1); }
+
+        /* Botão flutuante para reabrir o menu quando fechado */
+        #abrir-menu-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 999;
+            width: auto;
+            padding: 10px 14px;
+            background: #333;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            display: none; /* Começa oculto */
+            cursor: pointer;
+        }
+        #abrir-menu-btn:hover { background: #555; }
     </style>
 </head>
 <body>
     <div id="map"></div>
 
-    <!-- Menu Movimentável -->
+    <!-- Botão para reabrir o menu quando ele for fechado -->
+    <button id="abrir-menu-btn" onclick="togglePanel()">🗺️ Abrir Menu</button>
+
+    <!-- Menu Movimentável e Fechável -->
     <div id="info-panel" class="info-panel">
-        <div class="panel-header">
+        <div class="panel-header" id="panel-header">
             <span>🗺️ Atlas</span>
             <button class="close-btn" onclick="togglePanel()">✕</button>
         </div>
@@ -73,5 +103,46 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
     <script src="script.js"></script>
+
+    <script>
+        // --- FUNÇÃO PARA ABRIR E FECHAR O MENU ---
+        function togglePanel() {
+            const panel = document.getElementById('info-panel');
+            const btnAbrir = document.getElementById('abrir-menu-btn');
+            
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                btnAbrir.style.display = 'none';
+            } else {
+                panel.style.display = 'none';
+                btnAbrir.style.display = 'block';
+            }
+        }
+
+        // --- FUNÇÃO PARA TORNAR O MENU MÓVEL (ARRASTÁVEL) ---
+        const panel = document.getElementById('info-panel');
+        const header = document.getElementById('panel-header');
+        
+        let isDragging = false;
+        let startX, startY;
+
+        header.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX - panel.offsetLeft;
+            startY = e.clientY - panel.offsetTop;
+            document.styleSheets[0].insertRule ? document.styleSheets[0].insertRule('* { cursor: move !important; }', 0) : document.body.style.cursor = 'move';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            panel.style.left = `${e.clientX - startX}px`;
+            panel.style.top = `${e.clientY - startY}px`;
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            document.body.style.cursor = 'default';
+        });
+    </script>
 </body>
 </html>
