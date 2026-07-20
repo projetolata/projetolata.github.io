@@ -4,7 +4,7 @@ const JSONBIN_KEY = "$2a$10$pUeAGxNW4YmEtB5xo1fNDO4fgRs/8aUaXgGUWD2.3inM38W4BsKG
 
 let dadosSalvos = { pins: [], texts: [], emojis: [], polylines: [], polygons: [] };
 let map, drawnItems;
-let modoAdicaoAtivo = null; // Controla se o usuário está escolhendo onde clicar
+let modoAdicaoAtivo = null;
 
 // ====================== INICIALIZAÇÃO ======================
 function initMap() {
@@ -37,7 +37,7 @@ function initMap() {
     });
     map.addControl(drawControl);
 
-    // Evento de clique geral no mapa para soltar Textos ou Emojis onde o usuário quiser
+    // Evento de clique para soltar textos ou emojis onde o usuário quiser no mapa
     map.on('click', function(e) {
         if (!modoAdicaoAtivo) return;
 
@@ -52,11 +52,10 @@ function initMap() {
         }
 
         salvarNoJsonBin();
-        modoAdicaoAtivo = null; // Reseta o modo de clique
+        modoAdicaoAtivo = null;
         document.getElementById('map').style.cursor = '';
     });
 
-    // Evento ao criar pin com o Leaflet Draw
     map.on(L.Draw.Event.CREATED, function (e) {
         const layer = e.layer;
         const type = e.layerType;
@@ -80,7 +79,6 @@ function initMap() {
         }
     });
 
-    // Evento ao deletar elementos usando a ferramenta de edição
     map.on('draw:deleted', function (e) {
         e.layers.eachLayer(function (layer) {
             removerLayerDoBanco(layer);
@@ -138,9 +136,10 @@ function removerLayerDoBanco(layer) {
 }
 
 function adicionarPopupDeletar(layer, itemData, tipoArray) {
+    const nomeExibido = itemData.nome || itemData.texto || itemData.emoji || 'Item';
     const conteudo = `
         <div>
-            <b>${itemData.nome || itemData.texto || itemData.emoji || 'Item'}</b><br><br>
+            <b>${nomeExibido}</b><br><br>
             <button onclick="deletarItemEspecifico(${itemData.lat}, ${itemData.lng}, '${tipoArray}')" class="delete-btn" style="padding: 5px 10px; font-size: 12px; background: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️ Excluir</button>
         </div>
     `;
@@ -192,9 +191,9 @@ function redesenharTudoNaTela() {
 function adicionarTextoNaTela(t) {
     const textIcon = L.divIcon({
         className: 'custom-text-label',
-        html: `<div style="background: rgba(255,255,255,0.85); padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 12px; border: 1px solid #ccc; white-space: nowrap;">${t.texto}</div>`,
-        iconSize: [100, 20],
-        iconAnchor: [50, 10]
+        html: `<div style="background: rgba(255,255,255,0.9); padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 13px; border: 1px solid #999; box-shadow: 0 2px 5px rgba(0,0,0,0.2); white-space: nowrap;">${t.texto}</div>`,
+        iconSize: [120, 24],
+        iconAnchor: [60, 12]
     });
     const marker = L.marker([t.lat, t.lng], { icon: textIcon });
     adicionarPopupDeletar(marker, t, 'texts');
@@ -204,7 +203,7 @@ function adicionarTextoNaTela(t) {
 function adicionarEmojiNaTela(eData) {
     const emojiIcon = L.divIcon({
         className: 'custom-emoji-label',
-        html: `<div style="font-size: 26px; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">${eData.emoji}</div>`,
+        html: `<div style="font-size: 26px; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.3); width: 30px; height: 30px; line-height: 30px;">${eData.emoji}</div>`,
         iconSize: [30, 30],
         iconAnchor: [15, 15]
     });
@@ -236,7 +235,6 @@ function adicionarEmoji() {
         z-index: 2000; text-align: center; width: 320px; font-family: sans-serif;
     `;
 
-    // Lista abrangente de emojis categorizados para RPG, mapas e marcações
     const listaEmojis = [
         "📍", "🚩", "⚔️", "🛡️", "🏰", "🏯", "⛺", "🛖", 
         "🌲", "🌳", "🪵", "⛰️", "🌋", "💧", "🌊", "🔥", 
@@ -244,13 +242,14 @@ function adicionarEmoji() {
         "⚠️", "❓", "💡", "⛵", "🚢", "🐎", "🐉", "🐺"
     ];
 
+    // Forçamos tamanho fixo nos botões do grid para não estourarem o layout
     let gridHtml = listaEmojis.map(emo => `
-        <button class="emoji-op" style="font-size: 22px; padding: 6px; background: #f1f1f1; border: none; border-radius: 6px; cursor: pointer;">${emo}</button>
+        <button class="emoji-op" style="font-size: 20px; width: 35px; height: 35px; background: #f1f1f1; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: auto;">${emo}</button>
     `).join('');
 
     modal.innerHTML = `
         <h3 style="margin-top: 0; color: #333; font-size: 16px;">Selecione um Emoji</h3>
-        <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-bottom: 12px; max-height: 180px; overflow-y: auto;">
+        <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-bottom: 12px; max-height: 180px; overflow-y: auto; padding: 4px;">
             ${gridHtml}
         </div>
         <input type="text" id="emoji-custom" placeholder="Ou digite outro aqui..." style="width: 85%; padding: 6px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; text-align: center;">
@@ -262,14 +261,14 @@ function adicionarEmoji() {
 
     modal.querySelectorAll('.emoji-op').forEach(btn => {
         btn.onclick = () => {
-            ativarSelecaoEmoji(btn.innerText);
+            ativarSelecaoEmoji(btn.innerText.trim());
             modal.remove();
         };
     });
 
     modal.querySelector('#emoji-custom').onchange = (e) => {
         if (e.target.value) {
-            ativarSelecaoEmoji(e.target.value);
+            ativarSelecaoEmoji(e.target.value.trim());
             modal.remove();
         }
     };
