@@ -1,6 +1,6 @@
 // ================= CONFIGURAÇÕES DO JSONBIN =================
 const JSONBIN_URL = "https://api.jsonbin.io/v3/b/6a5db19ef5f4af5e29a610ea";
-const JSONBIN_KEY = "COLE_SUA_MASTER_KEY_AQUI"; // <--- COLE SUA MASTER KEY AQUI
+const JSONBIN_KEY = "$2a$10$pUeAGxNW4YmEtB5xo1fNDO4fgRs/8aUaXgGUWD2.3inM38W4BsKGe"; // <--- COLE SUA MASTER KEY AQUI
 // ==========================================================
 
 let dadosSalvos = { 
@@ -21,7 +21,7 @@ const larguraImagem = 2048;
 const alturaImagem = 2048;
 const bounds = [[0, 0], [alturaImagem, larguraImagem]];
 
-L.imageOverlay('mapa.jpg', bounds).addTo(map); // Mude 'mapa.jpg' para o nome exato do arquivo da sua imagem
+L.imageOverlay('mapa0001a.png', bounds).addTo(map); // Mude 'mapa.jpg' para o nome exato do arquivo da sua imagem
 map.fitBounds(bounds);
 
 // 2. FUNÇÕES VISUAIS PARA DESENHAR OS ITENS NO SEU MAPA
