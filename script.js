@@ -1,9 +1,9 @@
 // ================= CONFIGURAÇÕES DO JSONBIN =================
 const JSONBIN_URL = "https://api.jsonbin.io/v3/b/6a5db19ef5f4af5e29a610ea";
-const JSONBIN_KEY = "$2a$10$pUeAGxNW4YmEtB5xo1fNDO4fgRs/8aUaXgGUWD2.3inM38W4BsKGe"; // <--- COLE SUA MASTER KEY AQUI ENTRE AS ASPAS
+const JSONBIN_KEY = "COLE_SUA_MASTER_KEY_AQUI"; // <--- COLE SUA MASTER KEY AQUI ENTRE AS ASPAS
 // ==========================================================
 
-dadosSalvos = { 
+let dadosSalvos = { 
     pins: [], 
     textos: [], 
     tracos: [] 
@@ -19,15 +19,12 @@ async function carregarDados() {
         if (response.ok) {
             const resData = await response.json();
             
-            // O JSONBin guarda os dados reais dentro de .record
             dadosSalvos = resData.record || {};
             
-            // Garante que as listas existem para evitar erros
             if (!dadosSalvos.pins) dadosSalvos.pins = [];
             if (!dadosSalvos.textos) dadosSalvos.textos = [];
             if (!dadosSalvos.tracos) dadosSalvos.tracos = [];
 
-            // Desenha todos os itens salvos na tela
             dadosSalvos.pins.forEach(p => desenharPinVisual(p));
             dadosSalvos.textos.forEach(t => desenharTextoVisual(t));
             dadosSalvos.tracos.forEach(tr => desenharTracoVisual(tr));
@@ -41,8 +38,8 @@ async function carregarDados() {
     }
 }
 
-// 2. SALVAR OS DADOS NA NUVEM (Envia a lista completa atualizada)
-async function salvarNoGithub() { // Nome mantido para não quebrar o resto do seu projeto
+// 2. SALVAR OS DADOS NA NUVEM
+async function salvarNoGithub() {
     try {
         const response = await fetch(JSONBIN_URL, {
             method: 'PUT',
@@ -63,6 +60,8 @@ async function salvarNoGithub() { // Nome mantido para não quebrar o resto do s
     }
 }
 
+// Executa o carregamento assim que o script é lido na página
+carregarDados();
 // 3. EXEMPLO DE COMO ADICIONAR UM NOVO PIN (Certifique-se de usar .push)
 function adicionarPinNoMapa(latitude, longitude, nomePin) {
     const novoPin = {
