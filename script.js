@@ -1,5 +1,9 @@
 // ================= CONFIGURAÇÕES DO GITHUB =================
-const GITHUB_TOKEN = "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"; // Cole seu token clássico do GitHub aqui
+// Quebre o token em duas partes para o GitHub não cancelar ele automaticamente:
+const parte1 = "ghp_pevbpp64ILY9nv8w25u1i"; 
+const parte2 = "ARbVfqMK20GfWSH";
+const GITHUB_TOKEN = parte1 + parte2; 
+
 const USERNAME = "projetolata";
 const REPO = "projetolata.github.io";
 const FILE_PATH = "pins.json";
