@@ -245,7 +245,8 @@ map.on('click', async function(e) {
 });
 
 // Modo Pincel (Arrastar o mouse para desenhar linhas livres)
-let desenhando = pontosAtuais = null;
+let desenhando = null;
+let pontosAtuais = null;
 
 map.on('mousedown', function(e) {
     if (ferramentaAtiva === 'pincel') {
