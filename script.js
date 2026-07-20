@@ -13,24 +13,12 @@ function initMap() {
     const alturaImagem = 2048;
     const bounds = [[0, 0], [alturaImagem, larguraImagem]];
 
-    // Certifique-se de que o nome abaixo está idêntico ao arquivo na sua pasta do GitHub
-    const imagemUrl = 'mapa0001a.png';
-
-    const imageOverlay = L.imageOverlay(imagemUrl, bounds, {
-        errorOverlayUrl: '' // Evita loop se falhar
-    }).addTo(map);
-
+    const imageOverlay = L.imageOverlay('mapa0001a.png', bounds).addTo(map);
+    
     imageOverlay.on('load', function() {
         map.fitBounds(bounds);
-        console.log("Imagem do mapa carregada com sucesso!");
+        console.log("Mapa carregado com sucesso!");
     });
-
-    // Se houver erro ao carregar a imagem no GitHub Pages, avisa no console
-    imageOverlay.on('error', function() {
-        console.error("ERRO: O GitHub Pages não encontrou a imagem '" + imagemUrl + "'. Verifique se o nome exato e a extensão (.png/.jpg) estão corretos no repositório.");
-        alert("Erro ao carregar a imagem do mapa. Verifique o console (F12).");
-    });
-
     map.fitBounds(bounds);
 
     drawnItems = new L.FeatureGroup();
@@ -49,6 +37,7 @@ function initMap() {
     });
     map.addControl(drawControl);
 
+    // Evento ao criar um novo elemento com o Leaflet Draw
     map.on(L.Draw.Event.CREATED, function (e) {
         const layer = e.layer;
         const type = e.layerType;
@@ -58,6 +47,7 @@ function initMap() {
         salvarNoJsonBin();
     });
 
+    // Evento ao deletar elementos usando a ferramenta de edição
     map.on('draw:deleted', function (e) {
         e.layers.eachLayer(function (layer) {
             removerLayerDoBanco(layer);
@@ -117,26 +107,27 @@ function adicionarLayerAoBanco(layer, type) {
         adicionarPopupDeletar(layer, pinData, 'pins');
     } 
     else if (type === 'polyline') {
-        const latlngs = layer.getLatLngs();
-        dadosSalvos.polylines.push(latlngs);
+        dadosSalvos.polylines.push(layer.getLatLngs());
     } 
     else if (type === 'polygon' || type === 'rectangle') {
-        const latlngs = layer.getLatLngs();
-        dadosSalvos.polygons.push(latlngs);
+        dadosSalvos.polygons.push(layer.getLatLngs());
     }
 }
 
 function removerLayerDoBanco(layer) {
     if (layer instanceof L.Marker) {
         const latlng = layer.getLatLng();
+        // Remove de pins, texts ou emojis caso seja marcador
         dadosSalvos.pins = dadosSalvos.pins.filter(p => p.lat !== latlng.lat || p.lng !== latlng.lng);
+        dadosSalvos.texts = dadosSalvos.texts.filter(t => t.lat !== latlng.lat || t.lng !== latlng.lng);
+        dadosSalvos.emojis = dadosSalvos.emojis.filter(e => e.lat !== latlng.lat || e.lng !== latlng.lng);
     }
 }
 
 function adicionarPopupDeletar(layer, itemData, tipoArray) {
     const conteudo = `
         <div>
-            <b>${itemData.nome || 'Marcador'}</b><br><br>
+            <b>${itemData.nome || itemData.texto || itemData.emoji || 'Item'}</b><br><br>
             <button onclick="deletarItemEspecifico(${itemData.lat}, ${itemData.lng}, '${tipoArray}')" class="delete-btn" style="padding: 5px 10px; font-size: 12px; background: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️ Excluir</button>
         </div>
     `;
@@ -154,6 +145,7 @@ function deletarItemEspecifico(lat, lng, tipoArray) {
 // ====================== REDESENHAR NA TELA ======================
 
 function redesenharTudoNaTela() {
+    // Pins
     if (dadosSalvos.pins) {
         dadosSalvos.pins.forEach(p => {
             const marker = L.marker([p.lat, p.lng]);
@@ -162,6 +154,37 @@ function redesenharTudoNaTela() {
         });
     }
 
+    // Textos (Criados como marcadores com ícones de texto limpos)
+    if (dadosSalvos.texts) {
+        dadosSalvos.texts.forEach(t => {
+            const textIcon = L.divIcon({
+                className: 'custom-text-label',
+                html: `<div style="background: rgba(255,255,255,0.85); padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 12px; border: 1px solid #ccc; white-space: nowrap;">${t.texto}</div>`,
+                iconSize: [100, 20],
+                iconAnchor: [50, 10]
+            });
+            const marker = L.marker([t.lat, t.lng], { icon: textIcon });
+            adicionarPopupDeletar(marker, t, 'texts');
+            drawnItems.addLayer(marker);
+        });
+    }
+
+    // Emojis (Criados como marcadores com ícones de emoji)
+    if (dadosSalvos.emojis) {
+        dadosSalvos.emojis.forEach(e => {
+            const emojiIcon = L.divIcon({
+                className: 'custom-emoji-label',
+                html: `<div style="font-size: 24px; text-align: center;">${e.emoji}</div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+            const marker = L.marker([e.lat, e.lng], { icon: emojiIcon });
+            adicionarPopupDeletar(marker, e, 'emojis');
+            drawnItems.addLayer(marker);
+        });
+    }
+
+    // Linhas
     if (dadosSalvos.polylines) {
         dadosSalvos.polylines.forEach(coords => {
             const polyline = L.polyline(coords, { color: '#0066cc', weight: 5 });
@@ -169,6 +192,7 @@ function redesenharTudoNaTela() {
         });
     }
 
+    // Polígonos
     if (dadosSalvos.polygons) {
         dadosSalvos.polygons.forEach(coords => {
             const polygon = L.polygon(coords, { color: '#0066cc', weight: 5 });
@@ -177,14 +201,31 @@ function redesenharTudoNaTela() {
     }
 }
 
-// ====================== FUNÇÕES DO MENU ======================
+// ====================== FUNÇÕES DO MENU INTERATIVO ======================
 
 function adicionarTexto() {
-    alert("Função de texto em desenvolvimento.");
+    const texto = prompt("Digite o texto que deseja fixar no mapa:");
+    if (!texto) return;
+
+    // Pega o centro atual do mapa visível para colocar o texto no meio da tela
+    const center = map.getCenter();
+    const novoTexto = { lat: center.lat, lng: center.lng, texto: texto };
+
+    dadosSalvos.texts.push(novoTexto);
+    salvarNoJsonBin();
+    carregarDoJsonBin();
 }
 
 function adicionarEmoji() {
-    alert("Função de emoji em desenvolvimento.");
+    const emoji = prompt("Digite o emoji (ex: 🏰, ⚔️, 🌲):");
+    if (!emoji) return;
+
+    const center = map.getCenter();
+    const novoEmoji = { lat: center.lat, lng: center.lng, emoji: emoji };
+
+    dadosSalvos.emojis.push(novoEmoji);
+    salvarNoJsonBin();
+    carregarDoJsonBin();
 }
 
 function limparTudo() {
