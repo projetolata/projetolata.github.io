@@ -1,14 +1,5 @@
 {
-  "pins": [
-    {
-      "id": "pin_1784525382895",
-      "lat": 628.5,
-      "lng": 963.125,
-      "name": "casa",
-      "cor": "red",
-      "emoji": "📍"
-    }
-  ],
+  "pins": [],
   "textos": [],
   "tracos": []
 }
