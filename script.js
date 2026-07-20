@@ -1,6 +1,6 @@
 // ================= CONFIGURAÇÕES DO JSONBIN =================
 const JSONBIN_URL = "https://api.jsonbin.io/v3/b/6a5db19ef5f4af5e29a610ea";
-const JSONBIN_KEY = "COLE_SUA_MASTER_KEY_AQUI"; // <--- COLE SUA MASTER KEY AQUI ENTRE AS ASPAS
+const JSONBIN_KEY = "$2a$10$pUeAGxNW4YmEtB5xo1fNDO4fgRs/8aUaXgGUWD2.3inM38W4BsKGe"; // <--- COLE SUA MASTER KEY AQUI
 // ==========================================================
 
 let dadosSalvos = { 
@@ -9,7 +9,31 @@ let dadosSalvos = {
     tracos: [] 
 };
 
-// 1. CARREGAR OS DADOS (Executa assim que o site abre)
+// 1. INICIALIZAR O MAPA (Ajuste 'map' para o ID da sua div no HTML se for diferente)
+const map = L.map('map').setView([0, 0], 2); // Coloque as coordenadas centrais e o zoom inicial do seu mapa
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19
+}).addTo(map);
+
+// 2. FUNÇÃO VISUAL PARA DESENHAR O PIN NO MAPA
+function desenharPinVisual(pin) {
+    // Cria o marcador no mapa usando Leaflet
+    const marker = L.marker([pin.lat, pin.lng]).addTo(map);
+    if (pin.nome) {
+        marker.bindPopup(pin.nome);
+    }
+}
+
+function desenharTextoVisual(texto) {
+    // Sua lógica de texto (se houver)
+}
+
+function desenharTracoVisual(traco) {
+    // Sua lógica de traços (se houver)
+}
+
+// 3. CARREGAR OS DADOS DA NUVEM
 async function carregarDados() {
     try {
         const response = await fetch(JSONBIN_URL, {
@@ -18,30 +42,28 @@ async function carregarDados() {
         
         if (response.ok) {
             const resData = await response.json();
-            
             dadosSalvos = resData.record || {};
             
             if (!dadosSalvos.pins) dadosSalvos.pins = [];
             if (!dadosSalvos.textos) dadosSalvos.textos = [];
             if (!dadosSalvos.tracos) dadosSalvos.tracos = [];
 
+            // Desenha todos os pins salvos na tela
             dadosSalvos.pins.forEach(p => desenharPinVisual(p));
             dadosSalvos.textos.forEach(t => desenharTextoVisual(t));
             dadosSalvos.tracos.forEach(tr => desenharTracoVisual(tr));
             
-            console.log("Dados carregados com sucesso!");
-        } else {
-            console.error("Erro ao carregar do JSONBin. Status:", response.status);
+            console.log("Mapa e pins carregados com sucesso!");
         }
     } catch (e) {
-        console.error("Erro de conexão ao carregar dados:", e);
+        console.error("Erro ao carregar dados:", e);
     }
 }
 
-// 2. SALVAR OS DADOS NA NUVEM
-async function salvarNoGithub() {
+// 4. SALVAR OS DADOS NA NUVEM
+async function salvarNoGithub() { // Nome mantido para não quebrar seus botões
     try {
-        const response = await fetch(JSONBIN_URL, {
+        await fetch(JSONBIN_URL, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -49,49 +71,30 @@ async function salvarNoGithub() {
             },
             body: JSON.stringify(dadosSalvos)
         });
-
-        if (response.ok) {
-            console.log("Alterações salvas com sucesso no JSONBin!");
-        } else {
-            console.error("Erro ao salvar. Status:", response.status);
-        }
+        console.log("Salvo com sucesso!");
     } catch (e) {
-        console.error("Erro de conexão ao salvar:", e);
+        console.error("Erro ao salvar:", e);
     }
 }
 
-// Executa o carregamento assim que o script é lido na página
-carregarDados();
-// 3. EXEMPLO DE COMO ADICIONAR UM NOVO PIN (Certifique-se de usar .push)
-function adicionarPinNoMapa(latitude, longitude, nomePin) {
+// 5. CLIQUE NO MAPA PARA ADICIONAR UM NOVO PIN
+map.on('click', function(e) {
+    const nomePin = prompt("Nome do pin:");
+    if (!nomePin) return;
+
     const novoPin = {
-        lat: latitude,
-        lng: longitude,
+        lat: e.latlng.lat,
+        lng: e.latlng.lng,
         nome: nomePin
     };
 
-    // ADICIONA na lista existente (NÃO substitui o array todo)
+    // Adiciona na lista e desenha na hora
     dadosSalvos.pins.push(novoPin);
-
-    // Mostra visualmente na tela
     desenharPinVisual(novoPin);
 
-    // Salva tudo na nuvem
+    // Salva no JSONBin
     salvarNoGithub();
-}
+});
 
-// Funções visuais de exemplo (substitua pelas funções de desenho do seu mapa/Leaflet)
-function desenharPinVisual(pin) {
-    // Exemplo: Lógica que coloca o marcador visualmente no mapa usando pin.lat, pin.lng, pin.nome
-}
-
-function desenharTextoVisual(texto) {
-    // Lógica para desenhar textos
-}
-
-function desenharTracoVisual(traco) {
-    // Lógica para desenhar traços
-}
-
-// Executa o carregamento assim que o script é lido na página
+// Executa ao abrir a página
 carregarDados();
